@@ -94,3 +94,22 @@ def rul_labels(length: int, failure_index: int | None = None) -> list[int]:
 # Descriptive alias for downstream experiment code.
 construct_labels = build_labels
 generate_labels = build_labels
+
+
+def double_threshold_start(features: pd.DataFrame, multiplier=3.0, consecutive=2) -> int:
+    """Alternative: first run of consecutive RMS threshold crossings."""
+    rms = _rms_series(features).to_numpy(float)
+    n = max(1, math.ceil(len(rms) * .1)); threshold = rms[:n].mean() + multiplier * rms[:n].std()
+    hits = rms > threshold
+    for i in range(len(hits) - consecutive + 1):
+        if hits[i:i+consecutive].all(): return int(features.iloc[i].file_idx)
+    return int(features.iloc[-1].file_idx)
+
+
+def kurtosis_jump_start(features: pd.DataFrame, multiplier=3.0) -> int:
+    """Alternative: first kurtosis jump over healthy mean plus 3 sigma."""
+    cols=[c for c in ("kurt_h","kurt_v") if c in features]
+    if not cols: raise ValueError("kurtosis columns required")
+    k=features[cols].max(axis=1).to_numpy(float); n=max(1,math.ceil(len(k)*.1)); threshold=k[:n].mean()+multiplier*k[:n].std()
+    hits=k>threshold
+    return int(features.iloc[int(hits.argmax())].file_idx) if hits.any() else int(features.iloc[-1].file_idx)
