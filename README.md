@@ -1,40 +1,24 @@
 # xjtu-sy-rul-benchmark
 
-用于滚动轴承剩余寿命（RUL）预测的可复现实验基准框架。仓库只保存特征级数据和实验代码；约 7 GB 的原始振动波形留在用户本地，不进入仓库。
+本项目为 XJTU-SY 滚动轴承剩余寿命（RUL）预测建立可复现实验基准。实验的数据切分、标签和评估必须遵守 [PROTOCOL.md](PROTOCOL.md)。
 
-## 项目目标
+## 特征数据
 
-统一 XJTU-SY 数据的本地特征提取、标签、轴承级划分和指标接口，建立可审计、无数据泄漏的实验流程。最高规范见 [PROTOCOL.md](PROTOCOL.md)。
+`data/features/` 包含 15 个轴承的逐文件特征 CSV 和 `meta.csv`。每个原始数据文件代表 1 分钟；每行特征对应一个文件。特征表的实际列名以 CSV 表头为准，当前为：
 
-## XJTU-SY 数据集
+`file_idx, rms_h, rms_v, kurt_h, kurt_v, peak_h, peak_v, crest_h, crest_v`
 
-XJTU-SY 是滚动轴承全寿命振动数据集，包含 35 Hz/12 kN、37.5 Hz/11 kN、40 Hz/10 kN 三类工况。每个轴承由按分钟采集的 CSV 文件组成，每个文件包含水平和垂直两通道波形。
+`meta.csv` 记录 `bearing, condition, n_files`。`bad_files.csv` 是本地提取过程的坏文件清单。原始波形约 7 GB，保存在用户本地，不进入仓库。
 
-## 本地特征提取
+## 项目结构与后续运行
 
-在 Windows 本地执行，原始目录默认探测 `D:/RUL/XTJU`、`D:/RUL/XJTU` 及其最多两层内名称含 `XJTU` 的目录，也可显式指定：
+`src/` 放置数据、特征、标签、划分、指标与训练代码；`scripts/` 放置运行和误差分析入口；`tests/` 存放合成数据测试；`reports/` 与 `results/` 分别保存报告和实验输出。
 
-```bash
-python scripts/extract_features.py --raw-dir D:/RUL/XTJU
-```
-
-输出为 `data/features/Bearing{condition}_{index}.csv`、`meta.csv` 和坏文件清单 `bad_files.csv`。云端实验直接消费 `data/features/`。原始波形不会被复制到仓库。
-
-## 数据目录
-
-```text
-data/features/
-├── Bearing1_1.csv
-├── Bearing2_3.csv
-├── Bearing3_5.csv
-└── meta.csv
-```
-
-## 运行与复现
+先安装依赖并运行测试：
 
 ```bash
+python -m pip install -r requirements.txt
 python -m pytest
-python scripts/extract_features.py --help
 ```
 
-实验必须保存数据版本或校验值、轴承级划分、5 个随机种子（0–4）、配置和预测结果，并追加写入 `results/results.csv`。所有处理和评估遵守 `PROTOCOL.md`。
+后续实验按照 [PROTOCOL.md](PROTOCOL.md) 固定轴承级切分和评估规则，运行相应脚本，并在 `results/results.csv` 保存七列结果。当前任务只校准协议、数据目录和工程骨架，不执行模型训练。
